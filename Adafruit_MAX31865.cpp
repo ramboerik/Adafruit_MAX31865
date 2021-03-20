@@ -160,6 +160,41 @@ void Adafruit_MAX31865::setWires(max31865_numwires_t wires) {
 
 /**************************************************************************/
 /*!
+    @brief Get the temperature in non-blocking mode.
+    @param[out] temp The received temperature in C. Is only valid if the
+    function returns true.
+    @param RTDnominal The 'nominal' resistance of the RTD sensor, usually 100
+    or 1000
+    @param refResistor The value of the matching reference resistor, usually
+    430 or 4300
+    @return True if new temperature was received, false otherwise.
+*/
+/**************************************************************************/
+bool Adafruit_MAX31865::temperatureAsync(float &temp, float RTDnominal, float refResistor) {
+  uint16_t rtd;
+  if(!readRTDAsync(rtd)) {
+    return false;
+  }
+  temp = temperature(rtd, RTDnominal, refResistor);
+  return true;
+}
+
+/**************************************************************************/
+/*!
+    @brief Get the temperature in blocking mode.
+    @param RTDnominal The 'nominal' resistance of the RTD sensor, usually 100
+    or 1000
+    @param refResistor The value of the matching reference resistor, usually
+    430 or 4300
+    @returns Temperature in C
+ */
+/**************************************************************************/
+float Adafruit_MAX31865::temperature(float RTDnominal, float refResistor) {
+  return temperature(readRTD(), RTDnominal, refResistor);
+}
+
+/**************************************************************************/
+/*!
     @brief Read the temperature in C from the RTD through calculation of the
     resistance. Uses
    http://www.analog.com/media/en/technical-documentation/application-notes/AN709_0.pdf
@@ -171,10 +206,10 @@ void Adafruit_MAX31865::setWires(max31865_numwires_t wires) {
     @returns Temperature in C
 */
 /**************************************************************************/
-float Adafruit_MAX31865::temperature(float RTDnominal, float refResistor) {
+float Adafruit_MAX31865::temperature(uint16_t rtd, float RTDnominal, float refResistor) {
   float Z1, Z2, Z3, Z4, Rt, temp;
 
-  Rt = readRTD();
+  Rt = rtd;
   Rt /= 32768;
   Rt *= refResistor;
 

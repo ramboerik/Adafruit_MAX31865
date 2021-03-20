@@ -72,6 +72,7 @@ public:
   uint8_t readFault(void);
   void clearFault(void);
   uint16_t readRTD();
+  bool readRTDAsync(uint16_t& rtd);
 
   void setWires(max31865_numwires_t wires);
   void autoConvert(bool b);
@@ -79,6 +80,8 @@ public:
   void enableBias(bool b);
 
   float temperature(float RTDnominal, float refResistor);
+  bool temperatureAsync(float &temp, float RTDnominal, float refResistor);
+  float temperature(uint16_t rtd, float RTDnominal, float refResistor);
 
 private:
   enum sensor_state {
