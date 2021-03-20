@@ -81,7 +81,15 @@ public:
   float temperature(float RTDnominal, float refResistor);
 
 private:
+  enum sensor_state {
+    IDLE,
+    REQUEST_READ,
+    WAIT_FOR_READ,
+  };
+
   Adafruit_SPIDevice spi_dev;
+  sensor_state state;
+  unsigned waitForSensor;
 
   void readRegisterN(uint8_t addr, uint8_t buffer[], uint8_t n);
 

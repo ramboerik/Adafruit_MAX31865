@@ -36,7 +36,7 @@
 Adafruit_MAX31865::Adafruit_MAX31865(int8_t spi_cs, int8_t spi_mosi,
                                      int8_t spi_miso, int8_t spi_clk)
     : spi_dev(spi_cs, spi_clk, spi_miso, spi_mosi, 1000000,
-              SPI_BITORDER_MSBFIRST, SPI_MODE1) {}
+              SPI_BITORDER_MSBFIRST, SPI_MODE1), state(IDLE) {}
 
 /**************************************************************************/
 /*!
@@ -45,7 +45,8 @@ Adafruit_MAX31865::Adafruit_MAX31865(int8_t spi_cs, int8_t spi_mosi,
 */
 /**************************************************************************/
 Adafruit_MAX31865::Adafruit_MAX31865(int8_t spi_cs)
-    : spi_dev(spi_cs, 1000000, SPI_BITORDER_MSBFIRST, SPI_MODE1) {}
+    : spi_dev(spi_cs, 1000000, SPI_BITORDER_MSBFIRST, SPI_MODE1),
+      state(IDLE) {}
 
 /**************************************************************************/
 /*!
@@ -217,22 +218,55 @@ float Adafruit_MAX31865::temperature(float RTDnominal, float refResistor) {
 */
 /**************************************************************************/
 uint16_t Adafruit_MAX31865::readRTD(void) {
-  clearFault();
-  enableBias(true);
-  delay(10);
-  uint8_t t = readRegister8(MAX31865_CONFIG_REG);
-  t |= MAX31865_CONFIG_1SHOT;
-  writeRegister8(MAX31865_CONFIG_REG, t);
-  delay(65);
-
-  uint16_t rtd = readRegister16(MAX31865_RTDMSB_REG);
-
-  enableBias(false); // Disable bias current again to reduce selfheating.
-
-  // remove fault
-  rtd >>= 1;
-
+  uint16_t rtd = 0;
+  while(!readRTDAsync(rtd));
   return rtd;
+}
+
+/**************************************************************************/
+/*!
+    @brief Read the raw 16-bit value from the RTD_REG in one shot mode without
+           blocking(async).
+           The function should be called until it returns true and rtd can then
+           be used. rtd is invalid if the function returns false!
+    @param[out] rtd The raw unsigned 16-bit value, NOT temperature!
+    @return True if value was received from sensor, false if more time
+            must pass
+*/
+/**************************************************************************/
+bool Adafruit_MAX31865::readRTDAsync(uint16_t& rtd) {
+  switch(state) {
+    case IDLE:
+      clearFault();
+      enableBias(true);
+      waitForSensor = millis() + 10;
+      state = REQUEST_READ;
+      break;
+
+    case REQUEST_READ:
+      if(waitForSensor > millis()) {
+        break;
+      }
+      uint8_t t = readRegister8(MAX31865_CONFIG_REG) | MAX31865_CONFIG_1SHOT;
+      writeRegister8(MAX31865_CONFIG_REG, t);
+      waitForSensor = millis() + 65;
+      state = WAIT_FOR_READ;
+      break;
+
+    case WAIT_FOR_READ:
+      if(waitForSensor > millis()) {
+        break;
+      }
+
+      rtd = readRegister16(MAX31865_RTDMSB_REG) >> 1;
+      enableBias(false); // Disable bias current again to reduce selfheating.
+      state = IDLE;
+      return true;
+
+    default:
+      break;
+  };
+  return false;
 }
 
 /**********************************************/
