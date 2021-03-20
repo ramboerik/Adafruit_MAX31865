@@ -271,14 +271,15 @@ uint16_t Adafruit_MAX31865::readRTD(void) {
 /**************************************************************************/
 bool Adafruit_MAX31865::readRTDAsync(uint16_t& rtd) {
   switch(state) {
-    case IDLE:
+    case IDLE: {
       clearFault();
       enableBias(true);
       waitForSensor = millis() + 10;
       state = REQUEST_READ;
       break;
+    }
 
-    case REQUEST_READ:
+    case REQUEST_READ: {
       if(waitForSensor > millis()) {
         break;
       }
@@ -287,8 +288,9 @@ bool Adafruit_MAX31865::readRTDAsync(uint16_t& rtd) {
       waitForSensor = millis() + 65;
       state = WAIT_FOR_READ;
       break;
+    }
 
-    case WAIT_FOR_READ:
+    case WAIT_FOR_READ: {
       if(waitForSensor > millis()) {
         break;
       }
@@ -297,6 +299,7 @@ bool Adafruit_MAX31865::readRTDAsync(uint16_t& rtd) {
       enableBias(false); // Disable bias current again to reduce selfheating.
       state = IDLE;
       return true;
+    }
 
     default:
       break;
